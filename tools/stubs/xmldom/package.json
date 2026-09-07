@@ -1,0 +1,7 @@
+{
+  "name": "@xmldom/xmldom",
+  "version": "0.9.99",
+  "private": true,
+  "description": "Local stub. See docs/living-spec.md D-007 and src/build/xmldom-stub.ts.",
+  "main": "index.js"
+}

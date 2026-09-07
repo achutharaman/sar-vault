@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>sar-vault</title>
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!--
+    Content-Security-Policy — see docs/living-spec.md D-009 and SECURITY.md.
+
+    Declared here rather than only at the host so that `ng serve` and production
+    enforce the same policy; a CSP violation should surface while developing, not
+    at deploy time. `frame-ancestors`, HSTS and `Referrer-Policy` are ignored in
+    meta form and are set as real headers by the host.
+
+    'wasm-unsafe-eval' is required: Argon2id ships as WebAssembly (Q-009) and
+    WebAssembly.instantiate is blocked without it.
+
+    style-src allows 'unsafe-inline' because Angular injects component styles as
+    inline <style> elements at runtime. The framework remedy, ngCspNonce, needs a
+    per-request nonce and therefore a server, which D-003 rules out. Script
+    injection stays strictly controlled; this is a documented concession, not an
+    oversight.
+
+    connect-src lists 'self' plus the exact origins of the storage providers the
+    user can choose, and nothing else. CONTRIBUTING hard rule 2 allows the app to
+    talk to the user's chosen storage provider; it allows nothing else, so there
+    is no analytics, error reporting or CDN origin here and there must never be.
+
+    Note what is absent: Google's Picker API. Adopting a pre-existing Drive file
+    would need it, and it loads third-party script from Google's CDN — barred by
+    rule 2 and by script-src. That is why the Drive provider only handles files
+    it created itself (living-spec Q-008).
+  -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+    default-src 'none';
+    script-src 'self' 'wasm-unsafe-eval';
+    style-src 'self' 'unsafe-inline';
+    img-src 'self' data:;
+    font-src 'self';
+    connect-src 'self'
+      https://www.googleapis.com
+      https://oauth2.googleapis.com
+      https://graph.microsoft.com
+      https://login.microsoftonline.com;
+    manifest-src 'self';
+    worker-src 'self';
+    base-uri 'none';
+    form-action 'none';
+    object-src 'none';
+    frame-src 'none'"
+    />
+
+    <!-- .ico first for older browsers; SVG wins where supported and scales
+         cleanly to any display density. Both are served from our own origin,
+         which the CSP img-src 'self' allows. -->
+    <link rel="icon" href="favicon.ico" sizes="any" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  </head>
+  <body>
+    <app-root></app-root>
+  </body>
+</html>

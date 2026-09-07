@@ -25,8 +25,9 @@ disclosure — 90 days is the default expectation, and I'm happy to credit repor
 
 ## Threat model
 
-> **Draft.** This section is being written before implementation, deliberately.
-> It will be expanded and revised as the design settles.
+> **Published 2026-09-07**, before implementation, deliberately. It is revised
+> whenever a decision in [docs/living-spec.md](docs/living-spec.md) changes what is
+> true here — the change protocol in that document requires it.
 
 ### Assets being protected
 
@@ -34,8 +35,8 @@ disclosure — 90 days is the default expectation, and I'm happy to credit repor
 | --- | --- | --- |
 | Vault contents (credentials, notes, TOTP seeds) | Encrypted file in user's cloud/disk | AEAD encryption, key derived from master password |
 | Master password | User's head; transiently in browser memory | Never transmitted, never persisted |
-| Derived encryption key | Browser memory only, while unlocked | Non-extractable `CryptoKey` where possible; discarded on lock |
-| OAuth tokens for storage providers | Browser storage | Narrowest possible scope (app-folder only) |
+| Derived encryption key | Browser memory only, while unlocked | Discarded on lock. See "Key material and KDBX 4" below — the KDBX format rules out non-extractable keys |
+| OAuth tokens for storage providers | Browser memory only, never persisted | Narrow scopes; discarded when the tab closes — see "Cloud storage access" below |
 
 ### Adversaries considered
 
@@ -66,8 +67,8 @@ self-host from a build they verified, or use a native client such as KeePassXC.
 **2. JavaScript has no secure memory.**
 There is no `mlock`, no guaranteed zeroing, no protection from swap. Strings are
 immutable and the garbage collector may copy them freely. We use `ArrayBuffer` /
-`Uint8Array` for secret material and overwrite it on lock, and prefer non-extractable
-`CryptoKey` objects so raw key bytes never enter JS memory — but **we cannot promise
+`Uint8Array` for secret material and overwrite it on lock — but raw key bytes do
+enter JS memory, because KDBX 4 requires it (see point 8), and **we cannot promise
 that a copy of your master password isn't sitting in a heap page somewhere.**
 
 **3. XSS is game over.**
@@ -93,6 +94,76 @@ access patterns. Roughly: how many secrets you have and how often you touch them
 Copying a password puts it somewhere other applications, and on some platforms other
 devices, can read. Auto-clear reduces the window; it does not close it.
 
+**8. Key material and KDBX 4.**
+An earlier draft of this document said derived keys would live in non-extractable
+`CryptoKey` objects "where possible". Choosing KDBX 4 for interoperability
+([D-006](docs/living-spec.md)) makes that largely impossible, and it is better to say
+so than to leave the aspiration standing. KDBX derives its composite key, HMAC block
+keys and master key by chaining SHA-256/512 over raw bytes, so those bytes must exist
+in JavaScript memory by construction. We still overwrite buffers on lock and keep
+secrets in `Uint8Array` rather than strings, but the guarantee is weaker than
+"the key never enters JS memory", and pretending otherwise would be dishonest.
+
+---
+
+## Application delivery and build integrity
+
+The threat model above names the hosted-app problem as the risk we cannot eliminate.
+These are the controls that narrow it. None of them is a substitute for verifying
+your own build.
+
+**Content-Security-Policy.** Declared in `index.html` so that development and
+production enforce the same policy, with `frame-ancestors`, HSTS and `Referrer-Policy`
+added as real headers at the host. `script-src` is `'self' 'wasm-unsafe-eval'` —
+the WASM allowance is required because Argon2id ships as WebAssembly and
+`WebAssembly.instantiate` is otherwise blocked.
+
+`style-src` permits `'unsafe-inline'`. Angular injects component styles as inline
+`<style>` elements at runtime, and the framework's remedy (`ngCspNonce`) needs a
+per-request nonce, which needs a server — excluded by design. Style injection is a
+materially lower-severity hole than script injection, but it is a concession and is
+recorded as one ([D-009](docs/living-spec.md)). An end-to-end test asserts the policy
+on every run, so widening it is a visible decision rather than silent drift.
+
+**Dependencies.** Every dependency is attack surface in a password manager, so the
+count is kept small and each one is justified in review. `kdbxweb` carries Node-only
+fallbacks for XML parsing and hashing that are unreachable in a browser; both are
+replaced at build time by local stubs, and a post-build check fails the build if the
+real packages reappear in the output ([D-007](docs/living-spec.md)). This removes a
+transitive XML parser with known injection advisories from the shipped bundle
+entirely, rather than shipping code we never call.
+
+**Cloud storage access.** OAuth uses the authorization-code flow with PKCE
+(RFC 7636). A browser-only app cannot hold a client secret, so PKCE is what makes the
+flow safe without one; the client IDs in `.env` are public identifiers, not secrets.
+
+Access tokens live **in memory only** and are gone when the tab closes, which means
+reconnecting each session. Persisting one would leave a credential for your cloud
+storage sitting on disk where any XSS in this origin could read it — and an XSS here
+is already a total compromise, so this at least avoids widening what that compromise
+yields. No refresh tokens are requested or stored.
+
+Scopes are the narrowest that keep the vault usable, and deliberately not the narrowest
+available. Google's `drive.appdata` would hide the vault in a folder you cannot see,
+back up, or open in KeePassXC — which would defeat the point of the project — so
+`drive.file` is used instead, and the vault stays visible in your Drive.
+
+**Concurrent edits.** A version token read with the file is checked before writing, and
+a mismatched write is refused rather than merged. On OneDrive this is a true conditional
+write and is atomic. Google Drive v3 offers no equivalent on upload, so the check there
+is read-then-compare and a change landing inside that window would not be caught. That
+is a real gap, stated rather than glossed.
+
+**CI.** GitHub Actions are pinned by commit SHA rather than by mutable version tag.
+A tag can be repointed by whoever controls the action's repository, and that code
+runs with this repository's context — the same delivery-channel problem the hosted
+app has.
+
+**Not yet done.** Reproducible builds and published bundle hashes are the meaningful
+mitigation for the hosted-app problem and are **not implemented**. Until they are,
+a user who needs to eliminate that risk should self-host from a build they verified,
+or use a native client such as KeePassXC.
+
 ---
 
 ## Cryptographic design (planned)
@@ -104,6 +175,7 @@ devices, can read. Auto-clear reduces the window; it does not close it.
 | Randomness | `crypto.getRandomValues()` only | CSPRNG; never `Math.random()` |
 | Salts / nonces | Fresh per operation, never reused | Nonce reuse under GCM is catastrophic |
 | Integrity | Authentication tag verified before any parsing | Never parse unauthenticated plaintext |
+| Vault format | KDBX 4 via `kdbxweb` | Interoperable with KeePassXC, KeePassDX and Strongbox — no lock-in, and no proprietary export path |
 
 Decisions are recorded with reasoning in [docs/living-spec.md](docs/living-spec.md).
 All crypto and format code is covered by known-answer test vectors.
