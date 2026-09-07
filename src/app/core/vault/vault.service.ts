@@ -49,6 +49,14 @@ export class VaultService {
   private readonly cloudFilesSignal = signal<readonly VaultFileRef[]>([]);
   private readonly connectingSignal = signal(false);
 
+  /**
+   * Ids of cloud providers currently holding a usable token.
+   *
+   * Kept as a signal rather than asking each provider on demand, because token
+   * state changes after an OAuth redirect and the UI has to react to it.
+   */
+  private readonly connectedIdsSignal = signal<readonly string[]>([]);
+
   /** Vault files found in the connected cloud provider. */
   readonly cloudFiles = this.cloudFilesSignal.asReadonly();
   readonly connecting = this.connectingSignal.asReadonly();
@@ -68,6 +76,32 @@ export class VaultService {
 
   private readonly providerIdSignal = signal('local');
   readonly providerId = this.providerIdSignal.asReadonly();
+
+  /**
+   * Where a newly created vault will be written on first save.
+   *
+   * A vault created in the browser has no file behind it yet, so `save()` has
+   * to be told whether that first write is a local download or a `create()`
+   * against a connected cloud provider.
+   */
+  private readonly saveTargetSignal = signal('local');
+  readonly saveTarget = this.saveTargetSignal.asReadonly();
+
+  setSaveTarget(providerId: string): void {
+    this.saveTargetSignal.set(providerId);
+  }
+
+  /** Providers a new vault can be saved to right now. */
+  readonly newVaultTargets = computed<{ id: string; displayName: string }[]>(() => {
+    const connected = this.connectedIdsSignal();
+    return [
+      { id: 'local', displayName: this.registry.local.displayName },
+      ...this.registry
+        .availableCloud()
+        .filter((provider) => connected.includes(provider.id))
+        .map((provider) => ({ id: provider.id, displayName: provider.displayName })),
+    ];
+  });
 
   /** Entries matching the current search, sorted by title. */
   readonly visibleEntries = computed<readonly VaultEntry[]>(() => {
@@ -247,6 +281,11 @@ export class VaultService {
       await provider.completeConnect(code, state);
       this.provider = provider;
       this.providerIdSignal.set(provider.id);
+      this.connectedIdsSignal.update((ids) =>
+        ids.includes(provider.id) ? ids : [...ids, provider.id],
+      );
+      // A newly connected provider is the natural destination for a new vault.
+      this.saveTargetSignal.set(provider.id);
       this.cloudFilesSignal.set(await provider.list());
     } catch (error) {
       this.errorSignal.set(describe(error));
@@ -269,13 +308,22 @@ export class VaultService {
     this.errorSignal.set(undefined);
   }
 
-  /** Whether a given cloud provider currently holds a usable token. */
+  /**
+   * Whether a given cloud provider currently holds a usable token.
+   *
+   * Reads the signal rather than asking the provider, so templates using this
+   * re-render when a connection is established or dropped.
+   */
   isCloudConnected(providerId: string): boolean {
-    return this.registry.byId(providerId)?.isConnected() ?? false;
+    return this.connectedIdsSignal().includes(providerId);
   }
 
   disconnectCloud(providerId: string): void {
     this.registry.byId(providerId)?.disconnect();
+    this.connectedIdsSignal.update((ids) => ids.filter((id) => id !== providerId));
+    if (this.saveTargetSignal() === providerId) {
+      this.saveTargetSignal.set('local');
+    }
     this.cloudFilesSignal.set([]);
     if (this.providerIdSignal() === providerId) {
       this.useLocal();
@@ -296,6 +344,29 @@ export class VaultService {
 
     try {
       const data = await document.save();
+
+      /*
+       * A vault with no file behind it yet. For a cloud target this must be a
+       * `create()` — with `drive.file` or the OneDrive app folder the provider
+       * can only see files it created, so a `write()` to a made-up reference
+       * would fail, and falling back to a local download would silently ignore
+       * the destination the user picked.
+       */
+      if (!this.fileRef) {
+        const target = this.registry.byId(this.saveTargetSignal());
+        if (target?.isConnected()) {
+          const created = await target.create(this.fileNameSignal() ?? 'vault.kdbx', data);
+          this.provider = target;
+          this.providerIdSignal.set(target.id);
+          this.fileRef = created;
+          this.fileNameSignal.set(created.name);
+          this.version = (await target.getMetadata(created)).version;
+          this.dirtySignal.set(false);
+          this.statusSignal.set('unlocked');
+          return true;
+        }
+      }
+
       const ref = this.fileRef ?? {
         providerId: 'local',
         id: 'download',

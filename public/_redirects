@@ -1,0 +1,9 @@
+# SPA fallback.
+#
+# The OAuth redirect URI is /auth/callback. Without this rule a static host
+# returns 404 for that path, the app never loads, and the authorization code is
+# never redeemed — cloud storage silently cannot be connected.
+#
+# 200 (rewrite), not 302: the browser must keep the /auth/callback URL and its
+# ?code=… query string so the app can read them.
+/*    /index.html   200
