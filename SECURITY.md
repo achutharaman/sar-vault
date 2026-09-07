@@ -25,14 +25,9 @@ disclosure — 90 days is the default expectation, and I'm happy to credit repor
 
 ## Threat model
 
-<<<<<<< HEAD
-> **Draft.** This section is being written before implementation, deliberately.
-> It will be expanded and revised as the design settles.
-=======
 > **Published 2026-09-07**, before implementation, deliberately. It is revised
 > whenever a decision in [docs/living-spec.md](docs/living-spec.md) changes what is
 > true here — the change protocol in that document requires it.
->>>>>>> 7486439 (Initial commit)
 
 ### Assets being protected
 
@@ -40,11 +35,7 @@ disclosure — 90 days is the default expectation, and I'm happy to credit repor
 | --- | --- | --- |
 | Vault contents (credentials, notes, TOTP seeds) | Encrypted file in user's cloud/disk | AEAD encryption, key derived from master password |
 | Master password | User's head; transiently in browser memory | Never transmitted, never persisted |
-<<<<<<< HEAD
-| Derived encryption key | Browser memory only, while unlocked | Non-extractable `CryptoKey` where possible; discarded on lock |
-=======
 | Derived encryption key | Browser memory only, while unlocked | Discarded on lock. See "Key material and KDBX 4" below — the KDBX format rules out non-extractable keys |
->>>>>>> 7486439 (Initial commit)
 | OAuth tokens for storage providers | Browser storage | Narrowest possible scope (app-folder only) |
 
 ### Adversaries considered
@@ -76,13 +67,8 @@ self-host from a build they verified, or use a native client such as KeePassXC.
 **2. JavaScript has no secure memory.**
 There is no `mlock`, no guaranteed zeroing, no protection from swap. Strings are
 immutable and the garbage collector may copy them freely. We use `ArrayBuffer` /
-<<<<<<< HEAD
-`Uint8Array` for secret material and overwrite it on lock, and prefer non-extractable
-`CryptoKey` objects so raw key bytes never enter JS memory — but **we cannot promise
-=======
 `Uint8Array` for secret material and overwrite it on lock — but raw key bytes do
 enter JS memory, because KDBX 4 requires it (see point 8), and **we cannot promise
->>>>>>> 7486439 (Initial commit)
 that a copy of your master password isn't sitting in a heap page somewhere.**
 
 **3. XSS is game over.**
@@ -108,8 +94,6 @@ access patterns. Roughly: how many secrets you have and how often you touch them
 Copying a password puts it somewhere other applications, and on some platforms other
 devices, can read. Auto-clear reduces the window; it does not close it.
 
-<<<<<<< HEAD
-=======
 **8. Key material and KDBX 4.**
 An earlier draft of this document said derived keys would live in non-extractable
 `CryptoKey` objects "where possible". Choosing KDBX 4 for interoperability
@@ -159,7 +143,6 @@ mitigation for the hosted-app problem and are **not implemented**. Until they ar
 a user who needs to eliminate that risk should self-host from a build they verified,
 or use a native client such as KeePassXC.
 
->>>>>>> 7486439 (Initial commit)
 ---
 
 ## Cryptographic design (planned)
@@ -171,10 +154,7 @@ or use a native client such as KeePassXC.
 | Randomness | `crypto.getRandomValues()` only | CSPRNG; never `Math.random()` |
 | Salts / nonces | Fresh per operation, never reused | Nonce reuse under GCM is catastrophic |
 | Integrity | Authentication tag verified before any parsing | Never parse unauthenticated plaintext |
-<<<<<<< HEAD
-=======
 | Vault format | KDBX 4 via `kdbxweb` | Interoperable with KeePassXC, KeePassDX and Strongbox — no lock-in, and no proprietary export path |
->>>>>>> 7486439 (Initial commit)
 
 Decisions are recorded with reasoning in [docs/living-spec.md](docs/living-spec.md).
 All crypto and format code is covered by known-answer test vectors.
