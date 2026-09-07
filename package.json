@@ -42,6 +42,7 @@
     "@vitest/browser": "^4.1.11",
     "@vitest/browser-playwright": "^4.1.11",
     "@vitest/coverage-v8": "^4.1.11",
+    "@xmldom/xmldom": "file:tools/stubs/xmldom",
     "angular-eslint": "22.3.0",
     "crypto": "file:tools/stubs/node-crypto",
     "eslint": "^10.9.1",
@@ -52,7 +53,7 @@
     "vitest": "^4.0.8"
   },
   "overrides": {
-    "@xmldom/xmldom": "file:tools/stubs/xmldom"
+    "@xmldom/xmldom": "$@xmldom/xmldom"
   },
   "engines": {
     "node": "^22.22.3 || ^24.15.0 || >=26.0.0"
