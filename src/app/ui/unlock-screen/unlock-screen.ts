@@ -27,30 +27,30 @@ import { VaultService } from '../../core/vault/vault.service';
         <p class="hint">Connecting…</p>
       }
 
-      @if (mode() === 'open') {
-        @if (vault.cloudProviders.length > 0) {
-          <div class="providers">
-            <span class="providers-label">Open from</span>
-            <div class="provider-buttons">
-              @for (provider of vault.cloudProviders; track provider.id) {
-                @if (vault.isCloudConnected(provider.id)) {
-                  <button
-                    type="button"
-                    class="secondary"
-                    (click)="vault.disconnectCloud(provider.id)"
-                  >
-                    Disconnect {{ provider.displayName }}
-                  </button>
-                } @else {
-                  <button type="button" class="secondary" (click)="vault.connectCloud(provider.id)">
-                    {{ provider.displayName }}
-                  </button>
-                }
+      @if (vault.cloudProviders.length > 0) {
+        <div class="providers">
+          <span class="providers-label">Open from</span>
+          <div class="provider-buttons">
+            @for (provider of vault.cloudProviders; track provider.id) {
+              @if (vault.isCloudConnected(provider.id)) {
+                <button
+                  type="button"
+                  class="secondary"
+                  (click)="vault.disconnectCloud(provider.id)"
+                >
+                  Disconnect {{ provider.displayName }}
+                </button>
+              } @else {
+                <button type="button" class="secondary" (click)="vault.connectCloud(provider.id)">
+                  {{ provider.displayName }}
+                </button>
               }
-            </div>
+            }
           </div>
-        }
+        </div>
+      }
 
+      @if (mode() === 'open') {
         @if (vault.cloudFiles().length > 0) {
           <div class="providers">
             <span class="providers-label">Vaults found</span>
@@ -134,6 +134,30 @@ import { VaultService } from '../../core/vault/vault.service';
             />
           </label>
 
+          @if (vault.newVaultTargets().length > 1) {
+            <div class="field">
+              <span>Save it to</span>
+              <div class="provider-buttons">
+                @for (target of vault.newVaultTargets(); track target.id) {
+                  <button
+                    type="button"
+                    class="secondary"
+                    [class.chosen]="vault.saveTarget() === target.id"
+                    [attr.aria-pressed]="vault.saveTarget() === target.id"
+                    (click)="vault.setSaveTarget(target.id)"
+                  >
+                    {{ target.displayName }}
+                  </button>
+                }
+              </div>
+            </div>
+          } @else {
+            <p class="hint">
+              Connect Google Drive or OneDrive above to save a new vault straight to the cloud.
+              Otherwise it downloads to this device.
+            </p>
+          }
+
           <p class="hint">
             There is no recovery. If you forget this password the vault is gone — that is what
             zero-knowledge means.
@@ -212,6 +236,10 @@ import { VaultService } from '../../core/vault/vault.service';
       display: flex;
       flex-wrap: wrap;
       gap: 0.5rem;
+    }
+    .provider-buttons .chosen {
+      border-color: var(--accent);
+      background: var(--surface-active);
     }
     .link {
       background: none;

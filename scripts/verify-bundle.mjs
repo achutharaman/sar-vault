@@ -53,6 +53,51 @@ async function* walk(dir) {
   }
 }
 
+/**
+ * Host configuration that must reach the deployed output.
+ *
+ * These are not cosmetic. Without the SPA rewrite, /auth/callback 404s on a
+ * static host and OAuth can never complete. Without frame-ancestors, the app is
+ * clickjackable — and that directive cannot be expressed in the meta-tag CSP
+ * that covers everything else.
+ */
+const REQUIRED_HOST_CONFIG = [
+  {
+    file: '_redirects',
+    needles: ['/index.html   200'],
+    why: 'SPA fallback, without which /auth/callback 404s and OAuth cannot complete.',
+  },
+  {
+    file: '_headers',
+    needles: [
+      "frame-ancestors 'none'",
+      'X-Content-Type-Options: nosniff',
+      'Referrer-Policy: no-referrer',
+      'Strict-Transport-Security:',
+    ],
+    why: 'Security headers SECURITY.md states are set at the host.',
+  },
+];
+
+async function checkHostConfig(root) {
+  const failures = [];
+  for (const { file, needles, why } of REQUIRED_HOST_CONFIG) {
+    let content;
+    try {
+      content = await readFile(join(root, file), 'utf8');
+    } catch {
+      failures.push(`  ${file} is missing from the build output.\n    ${why}`);
+      continue;
+    }
+    for (const needle of needles) {
+      if (!content.includes(needle)) {
+        failures.push(`  ${file} no longer contains "${needle}".\n    ${why}`);
+      }
+    }
+  }
+  return failures;
+}
+
 async function main() {
   try {
     await stat(DIST);
@@ -100,6 +145,10 @@ async function main() {
     );
   }
 
+  // dist/<project>/browser is where assets land; find it rather than hard-coding.
+  const browserRoot = scripts[0]?.replace(/[^/]+$/, '') ?? DIST;
+  failures.push(...(await checkHostConfig(browserRoot)));
+
   if (failures.length > 0) {
     console.error(`verify:bundle — FAILED\n\n${failures.join('\n\n')}\n`);
     process.exit(1);
@@ -108,7 +157,9 @@ async function main() {
   const note = sawKdbxweb
     ? 'kdbxweb present, stubs verified'
     : 'kdbxweb not yet imported — stub checks inert until the format layer lands';
-  console.log(`verify:bundle — OK (${scripts.length} scripts checked; ${note})`);
+  console.log(
+    `verify:bundle — OK (${scripts.length} scripts checked; host config present; ${note})`,
+  );
 }
 
 await main();

@@ -114,7 +114,10 @@ your own build.
 
 **Content-Security-Policy.** Declared in `index.html` so that development and
 production enforce the same policy, with `frame-ancestors`, HSTS and `Referrer-Policy`
-added as real headers at the host. `script-src` is `'self' 'wasm-unsafe-eval'` —
+added as real headers at the host — see [docs/deployment.md](docs/deployment.md).
+Those headers live in `public/_headers`, and `npm run verify:bundle` fails the build
+if they go missing, so this is an enforced fact rather than a deployment note
+someone has to remember. `script-src` is `'self' 'wasm-unsafe-eval'` —
 the WASM allowance is required because Argon2id ships as WebAssembly and
 `WebAssembly.instantiate` is otherwise blocked.
 

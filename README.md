@@ -127,6 +127,10 @@ touches storage. Providers never see plaintext.
 - [x] Google Drive (`drive.file` scope, PKCE) — not `drive.appdata`, which hides
       the vault from its owner
 - [x] OneDrive (app folder, PKCE)
+- [x] Static host config: SPA fallback for `/auth/callback`, security headers
+- [ ] Verified against live Google / Microsoft endpoints — needs OAuth client IDs;
+      everything so far is proven against mocked responses only.
+      See [docs/TODO.md](docs/TODO.md)
 - [x] ETag / version-based conflict detection
 
 **v0.3 — usability**
@@ -170,6 +174,15 @@ IDs you registered with Google and Microsoft. Without them the app still works �
 just offers local files only.
 
 ---
+
+## Deployment
+
+See [docs/deployment.md](docs/deployment.md). The app is static files, but two
+things must be configured at the host: SPA fallback for the OAuth callback path,
+and the response headers SECURITY.md relies on. `npm run verify:bundle` fails the
+build if either is missing from the output.
+
+Known gaps are tracked in [docs/TODO.md](docs/TODO.md).
 
 ## Contributing
 

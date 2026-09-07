@@ -49,6 +49,17 @@ export abstract class CloudStorageProvider implements StorageProvider {
     this.oauth.disconnect();
   }
 
+  /**
+   * Create a new vault file and return a reference to it.
+   *
+   * This is on the base class rather than only on the concrete providers
+   * because it is the *entry point* for cloud storage: with narrow scopes
+   * (`drive.file`, the OneDrive app folder) a provider can only ever see files
+   * it created, so without this `list()` stays empty forever and cloud storage
+   * is unreachable.
+   */
+  abstract create(name: string, data: ArrayBuffer): Promise<VaultFileRef>;
+
   abstract list(path?: string): Promise<VaultFileRef[]>;
   abstract read(ref: VaultFileRef): Promise<VaultFileContent>;
   abstract write(

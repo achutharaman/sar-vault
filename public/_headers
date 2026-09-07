@@ -1,0 +1,28 @@
+# Response headers for static hosting (Cloudflare Pages / Netlify format).
+# See docs/deployment.md for the S3 + CloudFront equivalent.
+/*
+  # Only frame-ancestors is set here. The rest of the policy lives in a meta tag
+  # in index.html so that `ng serve` and production enforce the same rules —
+  # frame-ancestors is the one directive a meta tag cannot express. Two policies
+  # are enforced independently, so the effective policy is the intersection.
+  Content-Security-Policy: frame-ancestors 'none'
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  # An authorization code arrives in the URL. The app strips it immediately, but
+  # no-referrer means it can never leave in a Referer header even before that.
+  Referrer-Policy: no-referrer
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Resource-Policy: same-origin
+  Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()
+  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+
+# index.html must never be cached: it names the hashed bundles, so a stale copy
+# pins users to an old build — including one with a known vulnerability.
+/index.html
+  Cache-Control: no-cache, must-revalidate
+
+# Hashed filenames change whenever content changes, so they are safe to pin.
+/*.js
+  Cache-Control: public, max-age=31536000, immutable
+/*.css
+  Cache-Control: public, max-age=31536000, immutable
