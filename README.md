@@ -18,16 +18,18 @@ or your vault contents.
 
 ## Status
 
-🚧 **Pre-alpha — design phase.** Nothing here is usable yet. See
-[docs/living-spec.md](docs/living-spec.md) for current scope and decisions.
+🚧 **Pre-alpha, and still unaudited.** v0.1 and v0.2 are implemented: the app opens,
+edits and saves real KDBX 4 vaults, locally or in Google Drive / OneDrive. It has not
+been reviewed by anyone but its author — see [SECURITY.md](SECURITY.md) before trusting
+it with anything. See [docs/living-spec.md](docs/living-spec.md) for scope and decisions.
 
 | Area | Status |
 | --- | --- |
-| Threat model | In progress |
-| Vault format decision (KDBX 4 vs custom) | In progress |
-| Crypto core | Not started |
-| Storage providers | Not started |
-| UI | Not started |
+| Threat model | Published |
+| Vault format decision (KDBX 4 vs custom) | Decided — KDBX 4 via `kdbxweb` |
+| Crypto core | Argon2id, vectors chaining to RFC 9106 |
+| Storage providers | Local file, Google Drive, OneDrive |
+| UI | Unlock, browse, search, edit, save |
 
 ---
 
@@ -66,7 +68,7 @@ sync conflicts on a file you don't control.
 
 ---
 
-## Planned architecture
+## Architecture
 
 ```
 ┌──────────────────────────────────────────────┐
@@ -97,14 +99,14 @@ touches storage. Providers never see plaintext.
 
 ---
 
-## Planned stack
+## Stack
 
 - **Angular 22** — standalone components, signals, Signal Forms, zoneless change
   detection, strict TypeScript
 - **WebCrypto** for AEAD and CSPRNG; **Argon2id via WASM** for key derivation
-- **PWA** with offline support — the vault is usable with no connectivity
-- **Playwright** for E2E, **Vitest/Jest** for unit tests with known-answer vectors
-  on all crypto and format code
+- **PWA** with offline support — planned, not yet built
+- **Playwright** for E2E, **Vitest** for unit tests — run in real Chromium, so
+  known-answer vectors are checked against genuine WebCrypto and WebAssembly
 - **Static hosting** — S3 + CloudFront or Cloudflare Pages
 - **GitHub Actions** — lint, test, build, dependency audit, deploy on tag
 
@@ -113,18 +115,19 @@ touches storage. Providers never see plaintext.
 ## Roadmap
 
 **v0.1 — core**
-- [ ] Threat model published
-- [ ] Vault format decision documented
-- [ ] Crypto layer with known-answer test vectors
-- [ ] KDBX 4 read/write (or documented custom format)
-- [ ] Local file provider (download / upload)
-- [ ] Unlock, browse, edit, save
+- [x] Threat model published
+- [x] Vault format decision documented
+- [x] Crypto layer with known-answer test vectors
+- [x] KDBX 4 read/write (or documented custom format)
+- [x] Local file provider (download / upload)
+- [x] Unlock, browse, edit, save
 
 **v0.2 — cloud**
-- [ ] Storage provider interface finalised
-- [ ] Google Drive (`drive.appdata` scope, PKCE)
-- [ ] OneDrive (app folder, PKCE)
-- [ ] ETag / version-based conflict detection
+- [x] Storage provider interface finalised
+- [x] Google Drive (`drive.file` scope, PKCE) — not `drive.appdata`, which hides
+      the vault from its owner
+- [x] OneDrive (app folder, PKCE)
+- [x] ETag / version-based conflict detection
 
 **v0.3 — usability**
 - [ ] Password generator with entropy indicator
@@ -148,14 +151,23 @@ Prerequisites: Node.js (see [`.nvmrc`](.nvmrc)) and npm.
 
 ```bash
 npm ci          # install
-npm start       # dev server
-npm test        # unit tests
+npm start       # dev server on :4200
+npm test        # unit tests (Vitest in real Chromium)
 npm run e2e     # Playwright
-npm run lint    # lint
+npm run lint    # ESLint + Prettier
 npm run build   # production build
 ```
 
-*(Scripts land once the Angular workspace is scaffolded.)*
+Unit and E2E tests need a real browser:
+
+```bash
+sudo npx playwright install-deps chromium   # once per machine
+npx playwright install chromium
+```
+
+To enable cloud storage, copy `.env.example` to `.env` and fill in the OAuth client
+IDs you registered with Google and Microsoft. Without them the app still works — it
+just offers local files only.
 
 ---
 

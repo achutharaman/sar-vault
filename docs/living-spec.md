@@ -4,7 +4,7 @@ Running record of agreed scope and design decisions. Updated whenever something
 changes. If a decision here conflicts with code, this document is wrong — fix it.
 
 **Last updated:** 2026-09-07
-**Phase:** Phase 0 complete — toolchain in place; Phase 1 (crypto + format layers) not started
+**Phase:** v0.2 (cloud) implemented — OAuth PKCE, Google Drive, OneDrive, conflict detection
 
 ---
 
@@ -39,6 +39,15 @@ architecture.
 | D-011 | GitHub Actions pinned by commit SHA, not by version tag | 2026-09-07 | A tag is mutable and the action then runs with this repository's context — the same delivery-channel risk SECURITY.md describes for the hosted app. Dependabot maintains SHA pins and the trailing version comment |
 | D-012 | Prettier does not format Markdown | 2026-09-07 | It pads tables well beyond the 100-column limit set in `.editorconfig` and rewrites `*emphasis*` to `_emphasis_`. The docs are hand-wrapped and are currently the project's main artifact; code remains Prettier-owned |
 | D-013 | `strict` and `noUncheckedIndexedAccess` set explicitly in tsconfig | 2026-09-07 | `ng new --strict` does not actually emit `strict`, despite CONTRIBUTING requiring it. `noUncheckedIndexedAccess` types `bytes[i]` as `number \| undefined`, which is the right default for code that indexes byte arrays constantly — it caught an unchecked index in the first spec written |
+| D-014 | Argon2id via `hash-wasm` 4.12.0 (MIT) | 2026-09-07 | Resolves Q-009. Hand-tuned WASM, and carries PBKDF2 for the documented fallback in the same dependency, so it costs one entry under hard rule #4 rather than two. `argon2-browser`, the alternative, has not shipped since 2022-04 |
+| D-015 | Argon2 vectors verified through a two-step chain, with `@noble/hashes` as a dev-only cross-check | 2026-09-07 | RFC 9106's Argon2id vector uses associated data, which hash-wasm cannot express, so it cannot be evaluated against the implementation we ship. Instead `@noble/hashes` is asserted to reproduce the RFC vector exactly, and hash-wasm is asserted to agree with noble byte-for-byte on KDBX-shaped parameters. Satisfies hard rule #5 without self-generated digests |
+| D-016 | New vaults are written with Argon2**id**, not kdbxweb's Argon2**d** default | 2026-09-07 | SECURITY.md commits to Argon2id, and RFC 9106 names it the default choice. Set explicitly via `header.setKdf`. Existing vaults keep whatever KDF they were written with |
+| D-017 | The parsed `Kdbx` object is the source of truth; the domain model is a read-only projection | 2026-09-07 | Rebuilding a KDBX file from our simplified model would silently drop entry history, attachments, custom fields, icons and auto-type rules that KeePassXC wrote — data loss discovered only in another client, long after the fact. All mutations edit the parsed object. Covered by a test that a custom field survives an edit and save |
+| D-018 | The recycle bin is excluded from the domain projection | 2026-09-07 | KDBX deletion is a move, not an erase. Without this, deleted entries keep appearing in the list — caught by a test rather than by review |
+| D-019 | Google Drive uses the `drive.file` scope, not `drive.appdata` | 2026-09-07 | Resolves Q-008. `appdata` is a hidden folder: the user cannot see, back up, or open their own vault in KeePassXC, which contradicts the project's central claim. `drive.file` keeps the vault visible in their Drive. The cost is that adopting a *pre-existing* Drive file needs Google's Picker, which loads third-party script and is barred by hard rule #2 and by our CSP — so the app only handles files it created. Importing means opening locally and saving up |
+| D-020 | OAuth access tokens are held in memory only; no refresh tokens | 2026-09-07 | Resolves Q-005. Persisting a token would leave a credential for the user's cloud storage on disk, readable by any XSS — and SECURITY.md already states an XSS here is a total compromise, so this avoids widening what that compromise yields. Cost: reconnecting each session. Google does not issue refresh tokens to public browser clients without a secret anyway. The PKCE *verifier* does use `sessionStorage`, because the redirect destroys the page — it is tab-scoped, single-use, and useless without the matching code |
+| D-021 | Conflict detection: version token compared on write; the write is refused, never merged | 2026-09-07 | Resolves Q-004 for v0.2. OneDrive uses a true conditional write (`if-match` on cTag → 412), so the check is atomic. Drive v3 has no `If-Match` on upload, so it is read-then-compare with a small race window — Google's limitation, recorded rather than hidden. Entry-level merge stays in **Later** as the roadmap has it |
+| D-022 | OAuth client IDs injected at build time by a 12-line script, not a plugin | 2026-09-07 | `.env.example` already established the `NG_APP_*` convention, but Angular has no built-in env injection and a plugin would be another dependency to justify under hard rule #4. `scripts/generate-env.mjs` reads only allow-listed `NG_APP_*` keys, so an unrelated secret in `.env` cannot be swept into the bundle |
 
 ---
 
@@ -50,13 +59,12 @@ architecture.
 | Q-001 | Vault format | Implement KDBX 4 · use `kdbxweb` · custom documented format | **Open — decide first** |
 =======
 >>>>>>> 7486439 (Initial commit)
-| Q-002 | AEAD choice | AES-256-GCM (WebCrypto native) vs ChaCha20-Poly1305 (library) | Open |
-| Q-003 | Argon2id parameters | Memory / iterations / parallelism; behaviour on low-end devices | Open |
-| Q-004 | Sync conflict strategy | ETag + last-write-wins vs entry-level merge vs KDBX merge semantics | Open |
-| Q-005 | OAuth token storage | In-memory only vs sessionStorage vs IndexedDB; refresh-token handling without a backend | Open |
+| Q-002 | AEAD choice | AES-256-GCM (WebCrypto native) vs ChaCha20-Poly1305 (library) | **Largely moot for the vault itself** — KDBX 4 defines its own construction and kdbxweb implements it. Still open for anything we encrypt outside the vault file |
+| Q-003 | Argon2id parameters | Memory / iterations / parallelism; behaviour on low-end devices | Open — new vaults currently take kdbxweb's defaults. Needs a deliberate choice plus a fallback for low-memory devices |
 | Q-006 | Attachments in v1? | In scope vs deferred | Leaning defer |
-| Q-008 | Google Drive scope | `drive.appdata` (narrow, but hidden from the Drive UI and not manually recoverable) vs `drive.file` (broader, user-visible, picker-based) | Open — appdata is in tension with the "bring your own storage, no lock-in" pillar |
-| Q-009 | Argon2id implementation supplied to `setArgon2Impl()` | Which WASM build; whether it runs in a Web Worker to keep the ~1s unlock off the UI thread | Open — blocks D-006 |
+| Q-013 | Adopting a pre-existing cloud vault | Google's Picker is barred by hard rule #2. Options: keep create-only, allow an upload-then-save path, or revisit the rule | Open — today the workaround is to open the file locally and save it to the cloud |
+| Q-011 | Argon2 on the UI thread | Whether key derivation moves to a Web Worker, and how progress is reported | Open — derivation currently blocks the UI thread. Tolerable at kdbxweb's default cost, not at the higher parameters Q-003 may choose |
+| Q-012 | Passwords as strings in the domain model | Whether to carry secrets as `Uint8Array` with an explicit reveal step instead | Open — the UI must display and edit them, so v0.1 accepts strings; SECURITY.md records why that is a weakening |
 | Q-010 | Reproducible builds and published bundle hashes | How to produce and publish them; whether to document a verification procedure for users | Open — SECURITY.md names this as the mitigation for the hosted-app problem and currently records it as not implemented |
 
 ---
@@ -139,3 +147,7 @@ bump. There is no exception to this.
 | 2026-09-07 | Phase 0 implemented: Angular 22 workspace, Vitest in real Chromium, ESLint hard-rule and layer enforcement, Playwright, CSP, bundle verification, CI rewrite | No vault format or token impact — no vault code exists yet |
 | 2026-09-07 | D-007 mechanism corrected after testing: tsconfig `paths` does not intercept requires inside kdbxweb's UMD dist; replaced with npm-level stub packages | Build only |
 | 2026-09-07 | Threat model published (SECURITY.md); non-extractable-key claim withdrawn as unachievable under KDBX 4 | Documentation — corrects a claim that D-006 made untrue |
+| 2026-09-07 | Phase 1 implemented: crypto (Argon2id), format (KDBX 4), storage (local file), vault service, and the unlock/browse/edit/save UI | **Vault format is now real.** Files written are KDBX 4 with Argon2id, readable by KeePassXC. No existing vaults to migrate |
+| 2026-09-07 | Q-009 resolved as hash-wasm (D-014); Q-002 and Q-003 reassessed in light of KDBX owning its own AEAD | No token impact |
+| 2026-09-07 | v0.2 implemented: OAuth 2.0 with PKCE, Google Drive, OneDrive, provider registry, version-based conflict detection | **Stored OAuth tokens are not invalidated — because none are stored** (D-020). No vault format change; files written to cloud storage are the same KDBX 4 as local ones |
+| 2026-09-07 | Q-004, Q-005 and Q-008 resolved (D-019 … D-021); CSP `connect-src` widened to the four provider origins and nothing else | The CSP change is asserted by an e2e test, so adding any further origin fails CI |

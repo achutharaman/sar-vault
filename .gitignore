@@ -70,3 +70,9 @@ yarn-error.log*
 pnpm-debug.log*
 logs/
 *.log
+
+# Screenshots captured locally for review, not project state
+screenshots/
+
+# Generated from .env at build time — never committed
+src/environments/generated.ts

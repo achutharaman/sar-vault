@@ -23,9 +23,15 @@
     injection stays strictly controlled; this is a documented concession, not an
     oversight.
 
-    connect-src is 'self' only until storage providers land in v0.2, at which
-    point the specific provider origins get added — and nothing else, per the
-    "no third-party runtime calls" rule.
+    connect-src lists 'self' plus the exact origins of the storage providers the
+    user can choose, and nothing else. CONTRIBUTING hard rule 2 allows the app to
+    talk to the user's chosen storage provider; it allows nothing else, so there
+    is no analytics, error reporting or CDN origin here and there must never be.
+
+    Note what is absent: Google's Picker API. Adopting a pre-existing Drive file
+    would need it, and it loads third-party script from Google's CDN — barred by
+    rule 2 and by script-src. That is why the Drive provider only handles files
+    it created itself (living-spec Q-008).
   -->
     <meta
       http-equiv="Content-Security-Policy"
@@ -35,7 +41,11 @@
     style-src 'self' 'unsafe-inline';
     img-src 'self' data:;
     font-src 'self';
-    connect-src 'self';
+    connect-src 'self'
+      https://www.googleapis.com
+      https://oauth2.googleapis.com
+      https://graph.microsoft.com
+      https://login.microsoftonline.com;
     manifest-src 'self';
     worker-src 'self';
     base-uri 'none';
@@ -44,7 +54,12 @@
     frame-src 'none'"
     />
 
-    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <!-- .ico first for older browsers; SVG wins where supported and scales
+         cleanly to any display density. Both are served from our own origin,
+         which the CSP img-src 'self' allows. -->
+    <link rel="icon" href="favicon.ico" sizes="any" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   </head>
   <body>
     <app-root></app-root>

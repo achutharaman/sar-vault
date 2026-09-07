@@ -36,7 +36,7 @@ disclosure — 90 days is the default expectation, and I'm happy to credit repor
 | Vault contents (credentials, notes, TOTP seeds) | Encrypted file in user's cloud/disk | AEAD encryption, key derived from master password |
 | Master password | User's head; transiently in browser memory | Never transmitted, never persisted |
 | Derived encryption key | Browser memory only, while unlocked | Discarded on lock. See "Key material and KDBX 4" below — the KDBX format rules out non-extractable keys |
-| OAuth tokens for storage providers | Browser storage | Narrowest possible scope (app-folder only) |
+| OAuth tokens for storage providers | Browser memory only, never persisted | Narrow scopes; discarded when the tab closes — see "Cloud storage access" below |
 
 ### Adversaries considered
 
@@ -132,6 +132,27 @@ replaced at build time by local stubs, and a post-build check fails the build if
 real packages reappear in the output ([D-007](docs/living-spec.md)). This removes a
 transitive XML parser with known injection advisories from the shipped bundle
 entirely, rather than shipping code we never call.
+
+**Cloud storage access.** OAuth uses the authorization-code flow with PKCE
+(RFC 7636). A browser-only app cannot hold a client secret, so PKCE is what makes the
+flow safe without one; the client IDs in `.env` are public identifiers, not secrets.
+
+Access tokens live **in memory only** and are gone when the tab closes, which means
+reconnecting each session. Persisting one would leave a credential for your cloud
+storage sitting on disk where any XSS in this origin could read it — and an XSS here
+is already a total compromise, so this at least avoids widening what that compromise
+yields. No refresh tokens are requested or stored.
+
+Scopes are the narrowest that keep the vault usable, and deliberately not the narrowest
+available. Google's `drive.appdata` would hide the vault in a folder you cannot see,
+back up, or open in KeePassXC — which would defeat the point of the project — so
+`drive.file` is used instead, and the vault stays visible in your Drive.
+
+**Concurrent edits.** A version token read with the file is checked before writing, and
+a mismatched write is refused rather than merged. On OneDrive this is a true conditional
+write and is atomic. Google Drive v3 offers no equivalent on upload, so the check there
+is read-then-compare and a change landing inside that window would not be caught. That
+is a real gap, stated rather than glossed.
 
 **CI.** GitHub Actions are pinned by commit SHA rather than by mutable version tag.
 A tag can be repointed by whoever controls the action's repository, and that code

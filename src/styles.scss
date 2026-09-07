@@ -1,1 +1,105 @@
-/* You can add global styles to this file, and also import other style files */
+/* Global styles. Deliberately plain — v0.1 is about the vault working, not about
+   visual design. Colours are tokens so a real design pass has something to
+   replace rather than a scatter of literals. */
+
+:root {
+  color-scheme: light dark;
+
+  --bg: #ffffff;
+  --surface: #f7f7f8;
+  --surface-hover: #eeeef1;
+  --surface-active: #e4e8f5;
+  --border: #d9d9de;
+  --fg: #16161a;
+  --muted: #6b6b76;
+  --accent: #3355cc;
+  --error-bg: #fdecec;
+  --error-fg: #8c1d1d;
+  --warn-bg: #fdf6e3;
+  --warn-border: #e6d9a8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16161a;
+    --surface: #1e1e24;
+    --surface-hover: #26262e;
+    --surface-active: #2c3350;
+    --border: #33333d;
+    --fg: #ececf1;
+    --muted: #9a9aa6;
+    --accent: #8fa6ff;
+    --error-bg: #3a1d1d;
+    --error-fg: #ffb4b4;
+    --warn-bg: #322b16;
+    --warn-border: #574a22;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+  padding: 0.45rem 0.6rem;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+button {
+  font: inherit;
+  border: 1px solid transparent;
+  border-radius: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+button.secondary {
+  background: var(--surface);
+  color: var(--fg);
+  border-color: var(--border);
+}
+
+button.danger {
+  background: var(--error-fg);
+  color: #fff;
+}

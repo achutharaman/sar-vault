@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="sar-vault">
+  <title>sar-vault</title>
+
+  <!--
+    A keyhole on the app's accent colour.
+
+    Designed at 16px first, which is the size a favicon is actually seen at. An
+    earlier attempt drew a vault dial with radial spokes; at tab size it read as
+    a crosshair, so it was dropped. A keyhole is one solid shape with no thin
+    strokes to blur, and it survives downscaling intact.
+
+    The background is filled rather than transparent so the mark stays legible
+    against both light and dark browser chrome without shipping two assets.
+    Colour matches the accent token in src/styles.scss.
+  -->
+
+  <rect width="64" height="64" rx="14" fill="#3355cc" />
+  <path
+    d="M32 13a11 11 0 0 0-5.7 20.4L23.5 51h17l-2.8-17.6A11 11 0 0 0 32 13z"
+    fill="#ffffff"
+  />
+</svg>

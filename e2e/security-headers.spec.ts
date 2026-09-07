@@ -46,9 +46,18 @@ test.describe('Content-Security-Policy', () => {
     // is a visible decision rather than a silent drift.
     expect(csp.get('style-src')).toEqual(["'self'", "'unsafe-inline'"]);
 
-    // Hard rule 2: the app talks to the user's storage provider and nothing
-    // else. Until providers land in v0.2 this is 'self' only.
-    expect(csp.get('connect-src')).toEqual(["'self'"]);
+    /*
+     * Hard rule 2: the app talks to the user's chosen storage provider and
+     * nothing else. This asserts the exact allow-list rather than a subset, so
+     * that adding any analytics, error-reporting or CDN origin fails here.
+     */
+    expect(csp.get('connect-src')).toEqual([
+      "'self'",
+      'https://www.googleapis.com',
+      'https://oauth2.googleapis.com',
+      'https://graph.microsoft.com',
+      'https://login.microsoftonline.com',
+    ]);
   });
 
   test('loads and bootstraps without CSP violations', async ({ page }) => {
