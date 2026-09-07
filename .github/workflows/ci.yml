@@ -32,7 +32,7 @@ jobs:
             echo "::notice::No package.json yet — skipping build steps."
           fi
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: steps.pkg.outputs.exists == 'true'
         with:
           node-version-file: .nvmrc
@@ -69,7 +69,7 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: steps.pkg.outputs.exists == 'true'
         with:
           node-version-file: .nvmrc
