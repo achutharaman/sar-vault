@@ -58,10 +58,7 @@ architecture.
 
 | # | Question | Options | Status |
 | --- | --- | --- | --- |
-<<<<<<< HEAD
 | Q-001 | Vault format | Implement KDBX 4 · use `kdbxweb` · custom documented format | **Open — decide first** |
-=======
->>>>>>> 7486439 (Initial commit)
 | Q-002 | AEAD choice | AES-256-GCM (WebCrypto native) vs ChaCha20-Poly1305 (library) | **Largely moot for the vault itself** — KDBX 4 defines its own construction and kdbxweb implements it. Still open for anything we encrypt outside the vault file |
 | Q-003 | Argon2id parameters | Memory / iterations / parallelism; behaviour on low-end devices | Open — new vaults currently take kdbxweb's defaults. Needs a deliberate choice plus a fallback for low-memory devices |
 | Q-006 | Attachments in v1? | In scope vs deferred | Leaning defer |
