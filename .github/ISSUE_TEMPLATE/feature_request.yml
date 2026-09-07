@@ -1,0 +1,25 @@
+name: Feature request
+description: Suggest something
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve
+    validations: { required: true }
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed approach
+  - type: textarea
+    id: security
+    attributes:
+      label: Security implications
+      description: Does this touch crypto, the vault format, or expand what the app can access?
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: This does not require a backend or server-side state
+        - label: This does not add third-party runtime network calls

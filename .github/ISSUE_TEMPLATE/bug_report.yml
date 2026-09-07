@@ -1,0 +1,39 @@
+name: Bug report
+description: Something is broken (non-security)
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Do not report security vulnerabilities here.** See [SECURITY.md](../blob/main/SECURITY.md).
+        Never paste real credentials, vault contents, or OAuth tokens into an issue.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+    validations: { required: true }
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations: { required: true }
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1.
+        2.
+        3.
+    validations: { required: true }
+  - type: input
+    id: env
+    attributes:
+      label: Browser and OS
+      placeholder: Firefox 140 on Ubuntu 24.04
+    validations: { required: true }
+  - type: dropdown
+    id: provider
+    attributes:
+      label: Storage provider
+      options: [Local file, Google Drive, OneDrive, Dropbox, Box, Other, Not applicable]

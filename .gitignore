@@ -1,0 +1,61 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+.yarn/
+
+# Build output
+dist/
+tmp/
+out-tsc/
+.angular/
+*.tsbuildinfo
+
+# Testing
+coverage/
+.nyc_output/
+/playwright-report/
+/playwright/.cache/
+/test-results/
+/blob-report/
+
+# Environment & secrets — never commit OAuth client config
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets.json
+*.docx
+*.txt
+
+# Local project/tooling config, not for the public repo
+CLAUDE.md
+.claude/
+
+# Vault files — never commit a real or test vault with real data
+*.kdbx
+*.kdb
+!test/fixtures/**/*.kdbx
+
+# Editors
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+*.log
