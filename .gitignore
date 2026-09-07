@@ -28,6 +28,11 @@ coverage/
 secrets.json
 *.docx
 *.txt
+# ...but published crypto known-answer vectors (NIST CAVP / RFC files ship as .txt)
+# and static text assets must remain committable.
+!**/fixtures/**/*.txt
+!**/vectors/**/*.txt
+!public/**/*.txt
 
 # Local project/tooling config, not for the public repo
 CLAUDE.md

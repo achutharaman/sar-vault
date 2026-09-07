@@ -1,0 +1,7 @@
+{
+  "name": "crypto",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Local stub. See docs/living-spec.md D-007 and src/build/node-crypto-stub.ts.",
+  "main": "index.js"
+}

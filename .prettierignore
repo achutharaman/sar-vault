@@ -3,3 +3,8 @@ coverage/
 .angular/
 node_modules/
 package-lock.json
+
+# Markdown is hand-authored and hand-wrapped. Prettier pads tables well past the
+# 100-column limit in .editorconfig and rewrites *emphasis* to _emphasis_, which
+# is churn on the docs rather than an improvement. Code remains Prettier-owned.
+*.md
