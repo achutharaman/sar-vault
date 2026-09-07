@@ -11,6 +11,11 @@ out-tsc/
 .angular/
 *.tsbuildinfo
 
+# Tool caches
+.eslintcache
+vite.config.*.timestamp-*
+vitest.config.*.timestamp-*
+
 # Testing
 coverage/
 .nyc_output/
@@ -41,12 +46,13 @@ CLAUDE.md
 # Vault files — never commit a real or test vault with real data
 *.kdbx
 *.kdb
-!test/fixtures/**/*.kdbx
+# ...but committed test fixtures are required: format round-trip tests need real
+# KDBX files. Kept in step with the *.txt vector exemption above.
+!**/fixtures/**/*.kdbx
+!**/fixtures/**/*.kdb
 
-# Editors
-.vscode/*
-!.vscode/extensions.json
-!.vscode/settings.json
+# Editors — local editor config is personal, not project state
+.vscode/
 .idea/
 *.swp
 *.swo
