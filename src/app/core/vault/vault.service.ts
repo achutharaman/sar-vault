@@ -2,6 +2,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 
 import { OAuthClient } from '../auth/oauth-client';
 import { KdbxDocument, VaultOpenError } from '../format/kdbx';
+import { type ImportResult, importEntries } from '../import/importers';
 import type { Vault, VaultEntry, VaultEntryDraft } from '../model/vault';
 import { ProviderRegistry } from '../storage/provider-registry';
 import type { StorageProvider, VaultFileRef } from '../storage/types';
@@ -166,6 +167,7 @@ export class VaultService {
       this.version = version;
       this.vaultSignal.set(document.toDomain());
       this.dirtySignal.set(false);
+      this.settingsVersionSignal.update((n) => n + 1);
       this.statusSignal.set('unlocked');
       return true;
     } catch (error) {
@@ -184,6 +186,7 @@ export class VaultService {
     this.fileNameSignal.set(`${name}.kdbx`);
     this.vaultSignal.set(document.toDomain());
     this.dirtySignal.set(true);
+    this.settingsVersionSignal.update((n) => n + 1);
     this.errorSignal.set(undefined);
     this.statusSignal.set('unlocked');
   }
@@ -199,10 +202,68 @@ export class VaultService {
     this.document = undefined;
     this.version = undefined;
     this.vaultSignal.set(undefined);
+    this.settingsVersionSignal.update((n) => n + 1);
     this.dirtySignal.set(false);
     this.searchSignal.set('');
     this.errorSignal.set(undefined);
     this.statusSignal.set('locked');
+  }
+
+  /**
+   * Import entries from another manager's export.
+   *
+   * Nothing is written to storage — the entries land in the open vault and stay
+   * unsaved, so the user reviews them before committing. An import that failed
+   * halfway would be worse than one that never started, so a parse error throws
+   * before any entry is added.
+   */
+  importFrom(content: string, fileName = ''): ImportResult {
+    if (!this.document) {
+      throw new Error('Unlock a vault before importing into it.');
+    }
+
+    const result = importEntries(content, fileName);
+    for (const draft of result.entries) {
+      this.document.addEntry(draft);
+    }
+    this.refresh();
+    return result;
+  }
+
+  // ------------------------------------------------------- vault settings
+
+  /**
+   * App settings stored inside the vault file, so they follow it between
+   * devices instead of living in one browser.
+   *
+   * Bumped on every write so consumers can recompute. A signal rather than a
+   * callback because several places read the same settings.
+   */
+  private readonly settingsVersionSignal = signal(0);
+  readonly settingsVersion = this.settingsVersionSignal.asReadonly();
+
+  readSetting(key: string): string | undefined {
+    // Read through the version signal so callers using computed() recompute
+    // when a setting changes or a different vault is opened.
+    this.settingsVersionSignal();
+    return this.document?.readSetting(key);
+  }
+
+  /**
+   * Write an app setting.
+   *
+   * This marks the vault dirty: settings are now vault content, so they are
+   * only durable once the user saves. Saying so is better than writing silently
+   * and having the change vanish on the next unlock.
+   */
+  writeSetting(key: string, value: string | undefined): boolean {
+    if (!this.document) {
+      return false;
+    }
+    this.document.writeSetting(key, value);
+    this.settingsVersionSignal.update((n) => n + 1);
+    this.dirtySignal.set(true);
+    return true;
   }
 
   addEntry(draft: VaultEntryDraft): void {

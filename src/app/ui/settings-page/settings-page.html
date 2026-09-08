@@ -1,0 +1,49 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <h1>Settings</h1>
+      <p class="hint">Preferences are stored on this device only, never in your vault.</p>
+    </div>
+    <a class="button secondary" routerLink="/">Back to vault</a>
+  </header>
+
+  <section class="card">
+    <h2>Security</h2>
+
+    <label class="row">
+      <span>Lock automatically after</span>
+      <!-- [selected] per option, not [value] on the select: the select is bound
+           before @for has rendered its options, so [value] silently falls back
+           to the first one. That showed "Never" while auto-lock was actually
+           on — a security setting displaying the opposite of the truth. -->
+      <select (change)="autoLock.setTimeoutMinutes(+$any($event.target).value)">
+        @for (option of autoLockOptions; track option.minutes) {
+          <option
+            [value]="option.minutes"
+            [selected]="option.minutes === autoLock.timeoutMinutes()"
+          >
+            {{ option.label }}
+          </option>
+        }
+      </select>
+    </label>
+
+    @if (autoLock.secondsUntilLock(); as seconds) {
+      <p class="hint">Locking in {{ seconds }}s unless you do something.</p>
+    } @else if (!autoLock.enabled()) {
+      <p class="hint">
+        Auto-locking is off. An unlocked vault left open is readable by anyone who reaches the
+        screen.
+      </p>
+    }
+
+    <p class="hint">
+      Copied passwords are cleared from the clipboard after {{ clipboardSeconds }} seconds. The
+      clipboard is readable by other applications while it holds a value — see SECURITY.md.
+    </p>
+  </section>
+
+  <section class="card">
+    <app-generator-settings />
+  </section>
+</div>

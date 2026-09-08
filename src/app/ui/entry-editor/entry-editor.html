@@ -1,0 +1,277 @@
+<form (submit)="submit($event)">
+  <label>
+    <span>Title</span>
+    <input
+      type="text"
+      [value]="draft().title"
+      (input)="patch('title', $any($event.target).value)"
+      required
+    />
+  </label>
+
+  <div class="field">
+    <label for="entry-username">Username</label>
+    <div class="with-action">
+      <input
+        id="entry-username"
+        type="text"
+        autocomplete="off"
+        [value]="draft().username"
+        (input)="patch('username', $any($event.target).value)"
+      />
+      <button
+        type="button"
+        class="secondary"
+        [disabled]="!draft().username"
+        (click)="copy(draft().username, 'Username')"
+      >
+        Copy
+      </button>
+    </div>
+  </div>
+
+  <!-- The reveal button sits outside the label: a label that wraps it would
+       take its text into the field's accessible name ("Password Show"). -->
+  <div class="field">
+    <label for="entry-password">Password</label>
+    <div class="with-action">
+      <input
+        id="entry-password"
+        [type]="revealed() ? 'text' : 'password'"
+        autocomplete="off"
+        [value]="draft().password"
+        (input)="patch('password', $any($event.target).value)"
+      />
+      <button
+        type="button"
+        class="secondary"
+        [attr.aria-label]="revealed() ? 'Hide password' : 'Show password'"
+        (click)="revealed.set(!revealed())"
+      >
+        {{ revealed() ? 'Hide' : 'Show' }}
+      </button>
+      <button
+        type="button"
+        class="secondary"
+        [disabled]="!draft().password"
+        (click)="copy(draft().password, 'Password')"
+      >
+        Copy
+      </button>
+      <!-- Split button: the main half generates with whatever preset is
+           currently selected; the caret changes that selection. -->
+      <span class="split">
+        <button
+          type="button"
+          class="secondary split-main"
+          [attr.title]="'Generate using ' + activePreset().name"
+          (click)="generate()"
+        >
+          Generate
+        </button>
+        @if (presets.presets().length > 1) {
+          <button
+            type="button"
+            class="secondary split-toggle"
+            [attr.aria-label]="'Change preset (currently ' + activePreset().name + ')'"
+            [attr.aria-expanded]="showPresetMenu()"
+            (click)="togglePresetMenu()"
+            (keydown)="onPresetMenuKey($event)"
+          >
+            ▾
+          </button>
+        }
+
+        @if (showPresetMenu()) {
+          <ul class="preset-menu" role="menu">
+            @for (preset of presets.presets(); track preset.id) {
+              <li role="none">
+                <button
+                  type="button"
+                  role="menuitemradio"
+                  [attr.aria-checked]="preset.id === activePreset().id"
+                  [class.active]="preset.id === activePreset().id"
+                  (click)="choosePreset(preset.id)"
+                  (keydown)="onPresetMenuKey($event)"
+                >
+                  {{ preset.name }}
+                  @if (preset.id === presets.defaultId()) {
+                    <span class="menu-note">default</span>
+                  }
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </span>
+    </div>
+  </div>
+
+  <p class="hint entropy" [class]="'strength-' + strength()">
+    @if (hasGenerated()) {
+      Generated with <strong>{{ activePreset().name }}</strong> —
+    } @else {
+      Generate uses <strong>{{ activePreset().name }}</strong> —
+    }
+    {{ entropy() | number: '1.0-0' }} bits, {{ strength() }}.
+    <span class="muted">Presets are configured in Settings.</span>
+  </p>
+
+  @if (generatorError(); as message) {
+    <p class="error" role="alert">{{ message }}</p>
+  }
+
+  @if (clipboard.copiedLabel(); as label) {
+    <p class="hint copied" role="status">
+      {{ label }} copied — clearing in {{ clipboard.secondsLeft() }}s. The clipboard is readable by
+      other apps; see SECURITY.md.
+    </p>
+  }
+
+  <div class="field">
+    <label for="entry-url">URL</label>
+    <input
+      id="entry-url"
+      type="url"
+      [value]="draft().url"
+      (input)="patch('url', $any($event.target).value)"
+    />
+  </div>
+
+  <div class="field">
+    <label for="entry-tags">Tags</label>
+    @if (tags().length > 0) {
+      <ul class="tags">
+        @for (tag of tags(); track tag) {
+          <li>
+            {{ tag }}
+            <button type="button" [attr.aria-label]="'Remove tag ' + tag" (click)="removeTag(tag)">
+              ×
+            </button>
+          </li>
+        }
+      </ul>
+    }
+    <input
+      id="entry-tags"
+      type="text"
+      placeholder="Add a tag, then press Enter"
+      [value]="tagInput()"
+      (input)="tagInput.set($any($event.target).value)"
+      (keydown)="onTagKey($event)"
+      (blur)="addTag()"
+    />
+  </div>
+
+  <div class="field">
+    <label for="entry-totp">One-time password (otpauth URI)</label>
+    <input
+      id="entry-totp"
+      type="text"
+      autocomplete="off"
+      placeholder="otpauth://totp/..."
+      [value]="draft().totpUri ?? ''"
+      (input)="onTotpUriChange($any($event.target).value)"
+    />
+    @if (totpCode(); as code) {
+      <p class="totp">
+        <code>{{ code }}</code>
+        <span class="totp-countdown">{{ totpSeconds() }}s</span>
+        <button type="button" class="secondary" (click)="copy(code, 'One-time code')">Copy</button>
+      </p>
+    }
+    @if (totpError(); as message) {
+      <p class="error" role="alert">{{ message }}</p>
+    }
+  </div>
+
+  <div class="field">
+    <label for="entry-notes">Notes</label>
+    <textarea
+      id="entry-notes"
+      rows="4"
+      [value]="draft().notes"
+      (input)="patch('notes', $any($event.target).value)"
+    ></textarea>
+  </div>
+
+  <fieldset class="custom-fields">
+    <legend>Custom fields</legend>
+    @for (field of customFields(); track $index) {
+      <div class="custom-row">
+        <input
+          type="text"
+          placeholder="Name"
+          [attr.aria-label]="'Custom field ' + ($index + 1) + ' name'"
+          [value]="field.name"
+          (input)="updateCustomField($index, { name: $any($event.target).value })"
+        />
+        <input
+          [type]="field.protected ? 'password' : 'text'"
+          placeholder="Value"
+          autocomplete="off"
+          [attr.aria-label]="'Custom field ' + ($index + 1) + ' value'"
+          [value]="field.value"
+          (input)="updateCustomField($index, { value: $any($event.target).value })"
+        />
+        <label class="protect">
+          <input
+            type="checkbox"
+            [checked]="field.protected"
+            (change)="updateCustomField($index, { protected: $any($event.target).checked })"
+          />
+          Secret
+        </label>
+        <button
+          type="button"
+          class="secondary"
+          [attr.aria-label]="'Remove custom field ' + ($index + 1)"
+          (click)="removeCustomField($index)"
+        >
+          ×
+        </button>
+      </div>
+    }
+    <button type="button" class="secondary" (click)="addCustomField()">Add field</button>
+  </fieldset>
+
+  @if (history().length > 0) {
+    <div class="field">
+      <button
+        type="button"
+        class="link"
+        [attr.aria-expanded]="showHistory()"
+        (click)="showHistory.set(!showHistory())"
+      >
+        {{ showHistory() ? 'Hide' : 'Show' }} previous versions ({{ history().length }})
+      </button>
+
+      @if (showHistory()) {
+        <ul class="history">
+          @for (past of history(); track $index) {
+            <li>
+              <span class="history-when">{{ past.modified | date: 'medium' }}</span>
+              <span class="history-title">{{ past.title || '(untitled)' }}</span>
+              <button
+                type="button"
+                class="secondary"
+                [disabled]="!past.password"
+                (click)="copy(past.password, 'Previous password')"
+              >
+                Copy password
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  }
+
+  <div class="actions">
+    <button type="submit">{{ entry() ? 'Apply changes' : 'Add entry' }}</button>
+    @if (entry(); as existing) {
+      <button type="button" class="danger" (click)="deleted.emit(existing.id)">Delete</button>
+    }
+    <button type="button" class="secondary" (click)="cancelled.emit()">Cancel</button>
+  </div>
+</form>

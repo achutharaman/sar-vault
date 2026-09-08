@@ -29,7 +29,7 @@ it with anything. See [docs/living-spec.md](docs/living-spec.md) for scope and d
 | Vault format decision (KDBX 4 vs custom) | Decided — KDBX 4 via `kdbxweb` |
 | Crypto core | Argon2id, vectors chaining to RFC 9106 |
 | Storage providers | Local file, Google Drive, OneDrive |
-| UI | Unlock, browse, search, edit, save |
+| UI | Unlock, browse, search, edit, save, generate, TOTP, import |
 
 ---
 
@@ -134,11 +134,13 @@ touches storage. Providers never see plaintext.
 - [x] ETag / version-based conflict detection
 
 **v0.3 — usability**
-- [ ] Password generator with entropy indicator
-- [ ] TOTP generation
-- [ ] Search, tags, custom fields, password history
-- [ ] Idle auto-lock, clipboard auto-clear
-- [ ] Import from KeePass CSV/XML, Bitwarden JSON, browser CSV
+- [x] Password generator with entropy indicator — named presets in Settings, one-click
+      generate from the default, dropdown for the rest. Custom presets are stored in the
+      vault file, so they travel with it
+- [x] TOTP generation (RFC 6238, verified against the published vectors)
+- [x] Search, tags, custom fields, password history
+- [x] Idle auto-lock, clipboard auto-clear
+- [x] Import from KeePass CSV/XML, Bitwarden JSON, browser CSV
 
 **Later**
 - [ ] Dropbox, Box, WebDAV

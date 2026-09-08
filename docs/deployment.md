@@ -6,9 +6,10 @@ configure themselves: **SPA fallback routing** and **response headers**.
 
 Both matter more than usual here:
 
-- The OAuth redirect URI is `/auth/callback`. Without a fallback rule a static
-  host returns 404 for that path, the app never loads, and the authorization
-  code is never redeemed — cloud storage simply cannot be connected.
+- The app has client-side routes (`/settings`) and an OAuth redirect URI at
+  `/auth/callback`. Without a fallback rule a static host returns 404 for both:
+  a bookmarked or reloaded settings page breaks, and the authorization code is
+  never redeemed, so cloud storage simply cannot be connected.
 - `frame-ancestors` is the one CSP directive a `<meta>` tag cannot express, so
   it has to come from a real header or the app is clickjackable. The rest of the
   policy lives in `index.html` deliberately, so `ng serve` and production

@@ -1,0 +1,169 @@
+<section class="presets">
+  <header>
+    <h2>Password presets</h2>
+    <p class="hint">
+      The default is used when you press Generate. The others appear in the dropdown next to it.
+    </p>
+  </header>
+
+  <ul class="preset-list">
+    @for (preset of presets.presets(); track preset.id) {
+      <li [class.is-default]="preset.id === presets.defaultId()">
+        <div class="preset-info">
+          <span class="preset-name">
+            {{ preset.name }}
+            @if (preset.id === presets.defaultId()) {
+              <span class="badge">Default</span>
+            }
+            @if (preset.builtIn) {
+              <span class="badge muted-badge">Built-in</span>
+            }
+          </span>
+          <span class="preset-summary">
+            {{ summary(preset) }} · {{ entropyOf(preset) | number: '1.0-0' }} bits
+          </span>
+        </div>
+
+        <div class="preset-actions">
+          @if (preset.id !== presets.defaultId()) {
+            <button
+              type="button"
+              class="secondary"
+              [disabled]="!presets.canCustomise()"
+              (click)="setDefault(preset)"
+            >
+              Make default
+            </button>
+          }
+          @if (preset.builtIn) {
+            <button
+              type="button"
+              class="secondary"
+              [disabled]="!presets.canCustomise()"
+              [attr.aria-label]="'Duplicate preset ' + preset.name"
+              (click)="duplicate(preset)"
+            >
+              Duplicate
+            </button>
+          } @else {
+            <button type="button" class="secondary" (click)="startEdit(preset)">Edit</button>
+            <button
+              type="button"
+              class="secondary"
+              [attr.aria-label]="'Delete preset ' + preset.name"
+              (click)="remove(preset)"
+            >
+              Delete
+            </button>
+          }
+        </div>
+      </li>
+    }
+  </ul>
+
+  @if (error(); as message) {
+    <p class="error" role="alert">{{ message }}</p>
+  }
+
+  @if (editingId(); as editing) {
+    <form class="preset-form" (submit)="$event.preventDefault(); save()">
+      <h3>{{ editing === 'new' ? 'New preset' : 'Edit preset' }}</h3>
+
+      <label>
+        <span>Name</span>
+        <input
+          type="text"
+          [value]="draftName()"
+          (input)="draftName.set($any($event.target).value)"
+          required
+        />
+      </label>
+
+      <label class="length">
+        <span>Length: {{ draftOptions().length }}</span>
+        <input
+          type="range"
+          min="4"
+          max="128"
+          [value]="draftOptions().length"
+          (input)="setOption('length', +$any($event.target).value)"
+        />
+      </label>
+
+      <div class="toggles">
+        <label>
+          <input
+            type="checkbox"
+            [checked]="draftOptions().lowercase"
+            (change)="setOption('lowercase', $any($event.target).checked)"
+          />
+          a–z
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            [checked]="draftOptions().uppercase"
+            (change)="setOption('uppercase', $any($event.target).checked)"
+          />
+          A–Z
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            [checked]="draftOptions().digits"
+            (change)="setOption('digits', $any($event.target).checked)"
+          />
+          0–9
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            [checked]="draftOptions().symbols"
+            (change)="setOption('symbols', $any($event.target).checked)"
+          />
+          Symbols
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            [checked]="draftOptions().excludeAmbiguous"
+            (change)="setOption('excludeAmbiguous', $any($event.target).checked)"
+          />
+          No look-alikes
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            [checked]="draftOptions().requireEachClass"
+            (change)="setOption('requireEachClass', $any($event.target).checked)"
+          />
+          One of each type
+        </label>
+      </div>
+
+      <p class="entropy" [class]="'strength-' + draftStrength()">
+        <strong>{{ draftEntropy() | number: '1.0-0' }} bits</strong> — {{ draftStrength() }}
+      </p>
+
+      @if (validationMessage(); as message) {
+        <p class="error" role="alert">{{ message }}</p>
+      }
+
+      <div class="form-actions">
+        <button type="submit" [disabled]="!draftValid() || !draftName()">Save preset</button>
+        <button type="button" class="secondary" (click)="cancelEdit()">Cancel</button>
+      </div>
+    </form>
+  } @else if (presets.canCustomise()) {
+    <div class="form-actions">
+      <button type="button" class="secondary" (click)="startNew()">Add preset</button>
+      @if (presets.customPresets().length > 0) {
+        <button type="button" class="secondary" (click)="presets.resetToDefaults()">
+          Remove my presets
+        </button>
+      }
+    </div>
+  } @else {
+    <p class="hint">Unlock a vault to add your own presets — they are stored inside it.</p>
+  }
+</section>

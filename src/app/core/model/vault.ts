@@ -29,6 +29,36 @@ export interface VaultEntry {
   readonly notes: string;
   readonly created: Date;
   readonly modified: Date;
+  /** KDBX tags, for grouping across folders. */
+  readonly tags: readonly string[];
+  /** Fields beyond the standard five, including ones other clients wrote. */
+  readonly customFields: readonly VaultCustomField[];
+  /** An otpauth URI if this entry carries a one-time-password seed. */
+  readonly totpUri: string | undefined;
+  /** Previous versions, newest first. KDBX records these on every edit. */
+  readonly history: readonly VaultHistoryEntry[];
+}
+
+/**
+ * A non-standard entry field.
+ *
+ * `protected` mirrors KDBX's own flag: protected values get inner-stream
+ * encryption inside the file rather than being written as plain XML, and the
+ * flag must be preserved or a secret silently becomes readable to anyone with
+ * the file.
+ */
+export interface VaultCustomField {
+  readonly name: string;
+  readonly value: string;
+  readonly protected: boolean;
+}
+
+/** A point-in-time snapshot of an entry, as KDBX stores it. */
+export interface VaultHistoryEntry {
+  readonly modified: Date;
+  readonly title: string;
+  readonly username: string;
+  readonly password: string;
 }
 
 /** A folder of entries. KDBX groups nest arbitrarily. */
@@ -46,7 +76,17 @@ export interface Vault {
 }
 
 /** The editable fields of an entry. */
-export type VaultEntryDraft = Pick<VaultEntry, 'title' | 'username' | 'password' | 'url' | 'notes'>;
+export interface VaultEntryDraft {
+  readonly title: string;
+  readonly username: string;
+  readonly password: string;
+  readonly url: string;
+  readonly notes: string;
+  readonly tags?: readonly string[];
+  readonly customFields?: readonly VaultCustomField[];
+  /** An otpauth URI, or empty to clear the seed. */
+  readonly totpUri?: string;
+}
 
 export const EMPTY_ENTRY_DRAFT: VaultEntryDraft = {
   title: '',
@@ -54,4 +94,7 @@ export const EMPTY_ENTRY_DRAFT: VaultEntryDraft = {
   password: '',
   url: '',
   notes: '',
+  tags: [],
+  customFields: [],
+  totpUri: '',
 };

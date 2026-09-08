@@ -1,0 +1,89 @@
+<div class="shell">
+  <header class="toolbar">
+    <div class="identity">
+      <strong>{{ vault.vault()?.name }}</strong>
+      <span class="filename">
+        {{ vault.fileName() }}
+        @if (vault.dirty()) {
+          <span class="dirty" title="Unsaved changes">•</span>
+        }
+      </span>
+    </div>
+
+    <input
+      class="search"
+      type="search"
+      placeholder="Search entries"
+      [value]="vault.search()"
+      (input)="onSearch($event)"
+      aria-label="Search entries"
+    />
+
+    <div class="toolbar-actions">
+      <button type="button" class="secondary" (click)="startNewEntry()">New entry</button>
+      <label class="import secondary" role="button">
+        Import
+        <input type="file" accept=".csv,.json,.xml" (change)="onImportFile($event)" />
+      </label>
+      <a class="button secondary" routerLink="/settings">Settings</a>
+      <button type="button" (click)="vault.save()" [disabled]="vault.isBusy()">
+        {{ vault.status() === 'saving' ? 'Saving…' : vault.canWriteBack() ? 'Save' : 'Download' }}
+      </button>
+      <button type="button" class="secondary" (click)="vault.lock()">Lock</button>
+    </div>
+  </header>
+
+  @if (importError(); as message) {
+    <p class="error" role="alert">
+      {{ message }}
+      <button type="button" class="link" (click)="dismissImport()">Dismiss</button>
+    </p>
+  }
+
+  @if (importResult(); as result) {
+    <p class="notice" role="status">
+      Imported {{ result.entries.length }} entries. They are not saved yet — review them, then press
+      Save.
+      @if (result.skipped.length > 0) {
+        <br />
+        Skipped {{ result.skipped.length }}: {{ result.skipped.join('; ') }}
+      }
+      <button type="button" class="link" (click)="dismissImport()">Dismiss</button>
+    </p>
+  }
+
+  @if (vault.error(); as message) {
+    <p class="error" role="alert">{{ message }}</p>
+  }
+
+  @if (!vault.canWriteBack()) {
+    <p class="notice">
+      This browser can't write back to the file you opened, so saving downloads a new copy.
+      Chromium-based browsers support in-place saving.
+    </p>
+  }
+
+  <main class="panes">
+    <section class="list-pane" aria-label="Entries">
+      <app-entry-list
+        [entries]="vault.visibleEntries()"
+        [selectedId]="selectedId()"
+        [searching]="vault.search().length > 0"
+        (selected)="select($event)"
+      />
+    </section>
+
+    <section class="detail-pane" aria-label="Entry details">
+      @if (editorOpen()) {
+        <app-entry-editor
+          [entry]="selectedEntry()"
+          (submitted)="saveEntry($event)"
+          (deleted)="deleteEntry($event)"
+          (cancelled)="closeEditor()"
+        />
+      } @else {
+        <p class="placeholder">Select an entry, or create a new one.</p>
+      }
+    </section>
+  </main>
+</div>
